@@ -2,7 +2,7 @@ import gymnasium as gym
 import numpy as np
 import os
 from datetime import datetime
-from Agent import DQNAgent
+from MyModule.Agent import DQNAgent
 import matplotlib.pyplot as plt
 import seaborn as sns
 import imageio
