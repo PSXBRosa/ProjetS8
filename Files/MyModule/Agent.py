@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from functools import reduce
-from MemoryBuffer import MemoryBuffer
+from .MemoryBuffer import MemoryBuffer
 
 class DQNAgent:
     """

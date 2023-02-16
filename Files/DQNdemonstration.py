@@ -1,3 +1,8 @@
+import sys
+
+# adding package to search path
+sys.path.insert(0,"..\.")
+
 import gymnasium as gym
 import numpy as np
 import os
@@ -13,7 +18,7 @@ if __name__ == "__main__":
     env = gym.make(env_name, render_mode="rgb_array_list")
 
     # creating a new directory for outputting the results
-    dir = datetime.now().strftime("%m-%d-%Y %Hh%Mmin%Ss") + " - " + env_name + "/"
+    dir = "training sessions/" + datetime.now().strftime("%m-%d-%Y %Hh%Mmin%Ss") + " - " + env_name + "/"
     path = os.path.join(os.path.dirname(__file__), dir)
     os.makedirs(path)
 
