@@ -59,57 +59,60 @@ if __name__ == "__main__":
     env_name = "CartPole-v1"
     env = gym.make(env_name, render_mode="rgb_array_list")
 
-    # creating a new directory for outputting the results
-    dirname, filename = os.path.dirname(__file__), os.path.basename(__file__)
-    dir = "training sessions/" + datetime.now().strftime("%m-%d-%Y %Hh%Mmin%Ss") + " - " + env_name + " " + filename + "/"
-    path = os.path.join(dirname, dir)
-    os.makedirs(path)
-
     # creating the agent
     agent = DDQNAgent(env.observation_space, env.action_space)
 
     # maximum number of episodes
-    max_episodes = 10_000
+    max_episodes = 2_500
 
     # to store every epsiode data for later plotting
     all_returns = np.zeros(max_episodes)
     all_losses = np.zeros(max_episodes)
 
     # main loop
-    for i in range(0, max_episodes):
-        steps = 0
-        episode_return = 0
-        episode_loss = 0
+    try:
+        for i in range(0, max_episodes):
+            steps = 0
+            episode_return = 0
+            episode_loss = 0
 
-        # environment variables before the episode starts
-        done = False
-        state, _ = env.reset()
+            # environment variables before the episode starts
+            done = False
+            state, _ = env.reset()
 
-        # while there's not a terminal state
-        while not done:
+            # while there's not a terminal state
+            while not done:
+                
+                # agent chooses an action
+                action = agent.get_action(state)
+
+                # state transition
+                next_state, reward, done, truncated, _ = env.step(action)
+                done = done or truncated
+
+                # save experience on memory and traning
+                agent.memory.include(state, next_state, action, reward, done)
+                loss = agent.train(256)
+
+                #
+                steps +=1
+                episode_return += reward
+                episode_loss += loss
+
+                # next state becomes the current state
+                state = next_state
             
-            # agent chooses an action
-            action = agent.get_action(state)
-
-            # state transition
-            next_state, reward, done, _, _ = env.step(action)
-
-            # save experience on memory and traning
-            agent.memory.include(state, next_state, action, reward, done)
-            loss = agent.train(256)
-
-            #
-            steps +=1
-            episode_return += reward
-            episode_loss += loss
-
-            # next state becomes the current state
-            state = next_state
-        
-        # printing values
-        print(f"\rEPISODE [{i + 1}] | RETURN [{episode_return}] | FINAL LOSS [{(episode_loss/steps):.2f}] | EPSILON [{agent.e:.2f}]            ", end="")
-        all_returns[i] = episode_return
-        all_losses[i] = episode_loss/steps
+            # printing values
+            print(f"\rEPISODE [{i + 1}] | RETURN [{episode_return}] | FINAL LOSS [{(episode_loss/steps):.2f}] | EPSILON [{agent.e:.2f}]            ", end="")
+            all_returns[i] = episode_return
+            all_losses[i] = episode_loss/steps
+    except KeyboardInterrupt:
+        pass
+    # creating a new directory for outputting the results
+    dirname, filename = os.path.dirname(__file__), os.path.basename(__file__)
+    dir = "training sessions/" + datetime.now().strftime("%m-%d-%Y %Hh%Mmin%Ss") + " - " + env_name + " " + filename + "/"
+    path = os.path.join(dirname, dir)
+    os.makedirs(path)
     
     # saving the agent variables
     temp_dict = {}
