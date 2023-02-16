@@ -86,6 +86,44 @@ class DQNAgent:
             action = action.cpu().numpy()
             return action
 
+    def _compute_loss(self, states, new_states, actions, rewards, terminals):
+        """
+        private method for computing the batch loss
+
+        Parameters:
+            states: torch.tensor
+                batch of states
+            new_states: torch.tensor
+                batch of the following states
+            actions: torch.tensor
+                batch of actions taken in the state transitions
+            rewards: torch.tensor
+                batch of the rewards gathered
+            terminals: torch.tensor
+                batch of flags indicating if the new state is terminal or not
+        Returns:
+            loss: torch.Tensor
+                computed loss
+        """
+
+        all_q_preds = self._network(states)
+
+        # gets only the q-value of the actions that were actually taken. The vector's shape is also corrected in this line
+        q_preds = all_q_preds.gather(1, actions.unsqueeze(1)).flatten()
+
+        # we do not want these following calculations to interfere in the network optimization
+        with torch.no_grad():
+            # gets the maximum predicted q-value for the actions on each of the next states
+            q_nexts = self._network(new_states).max(1)[0]
+
+            # Bellman's equation
+            target = (rewards + self.gamma*q_nexts*(1-terminals)).to(self._device)
+
+        # mean squared error using the update law
+        loss = F.mse_loss(q_preds, target)
+        return loss
+
+
     def train(
         self,
         batch_size
@@ -107,26 +145,12 @@ class DQNAgent:
             return float("inf")
 
         # sample experiences
-        states, new_states, actions, \
-        rewards, terminals = (torch.as_tensor(arr).to(self._device) for arr in self.memory.sample(batch_size))
+        batch = (torch.as_tensor(arr).to(self._device) for arr in self.memory.sample(batch_size))
 
         # gets the predicted q-value for the actions on each of the states
         self._network.train()
-        all_q_preds = self._network(states)
-
-        # gets only the q-value of the actions that were actually taken. The vector's shape is also corrected in this line
-        q_preds = all_q_preds.gather(1, actions.unsqueeze(1)).flatten()
-
-        # we do not want these following calculations to interfere in the network optimization
-        with torch.no_grad():
-            # gets the maximum predicted q-value for the actions on each of the next states
-            q_nexts = self._network(new_states).max(1)[0]
-
-            # Bellman's equation
-            target = (rewards + self.gamma*q_nexts*(1-terminals)).to(self._device)
-
-        # mean squared error using the update law
-        loss = F.mse_loss(q_preds, target)
+        
+        loss = self._compute_loss(*batch)
 
         # backwards propagation
         self._optimizer.zero_grad()

@@ -6,6 +6,52 @@ from MyModule.Agent import DQNAgent
 import matplotlib.pyplot as plt
 import seaborn as sns
 import imageio
+from copy import deepcopy
+import torch
+import torch.nn.functional as F
+
+class DDQNAgent(DQNAgent):
+    TAU = 1 # How much of the policy network should be copied into the target network ( between 0 and 1 )
+    N = 1_000 # How ofter that copying process must happen ( in time steps )
+
+    def __init__(self, observation_space, action_space):
+        super().__init__(observation_space, action_space)
+
+        # creates targets network
+        self._target = deepcopy(self._network)
+
+    # for copying weights into the new network
+    def _copy_weights(self):
+        for target_param, param in zip(self._target.parameters(), self._network.parameters()):
+            target_param.data.copy_(self.TAU * param + (1-self.TAU) * target_param)
+
+    # overwritting the parent method
+    def _compute_loss(self, states, new_states, actions, rewards, terminals):
+
+        all_q_preds = self._network(states)
+
+        # gets only the q-value of the actions that were actually taken. The vector's shape is also corrected in this line
+        q_preds = all_q_preds.gather(1, actions.unsqueeze(1)).flatten()
+
+        # we do not want these following calculations to interfere in the network optimization
+        with torch.no_grad():
+            # gets the maximum predicted q-value for the actions on each of the next states
+            q_nexts = self._target(new_states).max(1)[0]
+
+            # Bellman's equation
+            target = (rewards + self.gamma*q_nexts*(1-terminals)).to(self._device)
+
+        # mean squared error using the update law
+        loss = F.mse_loss(q_preds, target)
+        return loss
+    
+    # overwritting the parent method
+    def train(self, batch_size):
+        loss = super().train(batch_size)
+        if self.steps%self.N == 0:
+            self._copy_weights()
+        return loss
+
 
 if __name__ == "__main__":
     # creating the environment
@@ -19,7 +65,7 @@ if __name__ == "__main__":
     os.makedirs(path)
 
     # creating the agent
-    agent = DQNAgent(env.observation_space, env.action_space)
+    agent = DDQNAgent(env.observation_space, env.action_space)
 
     # maximum number of episodes
     max_episodes = 350
