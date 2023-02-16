@@ -1,6 +1,7 @@
 import gymnasium as gym
 import numpy as np
 import os
+import json
 from datetime import datetime
 from MyModule.Agent import DQNAgent
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ import torch.nn.functional as F
 
 class DDQNAgent(DQNAgent):
     TAU = 1 # How much of the policy network should be copied into the target network ( between 0 and 1 )
-    N = 1_000 # How ofter that copying process must happen ( in time steps )
+    N = 2000 # How ofter that copying process must happen ( in time steps )
 
     def __init__(self, observation_space, action_space):
         super().__init__(observation_space, action_space)
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     agent = DDQNAgent(env.observation_space, env.action_space)
 
     # maximum number of episodes
-    max_episodes = 350
+    max_episodes = 10_000
 
     # to store every epsiode data for later plotting
     all_returns = np.zeros(max_episodes)
@@ -109,6 +110,15 @@ if __name__ == "__main__":
         print(f"\rEPISODE [{i + 1}] | RETURN [{episode_return}] | FINAL LOSS [{(episode_loss/steps):.2f}] | EPSILON [{agent.e:.2f}]            ", end="")
         all_returns[i] = episode_return
         all_losses[i] = episode_loss/steps
+    
+    # saving the agent variables
+    temp_dict = {}
+    temp_dict.update(agent.__dict__)
+    for cl in agent.__class__.mro()[:-1]:
+        temp_dict.update(cl.__dict__)
+    temp_dict = {k:v for k,v in temp_dict.items() if "__" not in k} # removes all the special attributes
+    with open(path + 'attr.json','w') as fp:
+        json.dump(temp_dict, fp, skipkeys=True, default=str, indent=4) # dumps into a file
     
     # plotting and saving training results
     agent.save(path + "weights.pth")

@@ -11,8 +11,8 @@ class DQNAgent:
     Creates a very simple DQN agent
     """
     gamma = 0.99        # discount to be applied to get the discounted return
-    decay = 0.9994      # decay for the probability of exploration (epsilon-greedy)
-    min_epsilon = 0.01  # minimum probability of exploration
+    decay = 0.99994     # decay for the probability of exploration (epsilon-greedy)
+    min_epsilon = 0.05  # minimum probability of exploration
     lr = 1e-4           # learning rate
     
     def __init__(
@@ -74,7 +74,7 @@ class DQNAgent:
         """
 
         # applies decay to the epsilon value if it's still above the lower limit
-        self._epsilon *= self.decay if self._epsilon > self.min_epsilon else self.min_epsilon
+        self._epsilon = max(self._epsilon*self.decay, self.min_epsilon)
 
         # exploration criteria
         if np.random.random() < self._epsilon and not self.greedy:

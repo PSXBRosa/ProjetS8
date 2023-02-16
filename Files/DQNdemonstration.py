@@ -6,6 +6,7 @@ from MyModule.Agent import DQNAgent
 import matplotlib.pyplot as plt
 import seaborn as sns
 import imageio
+import json
 
 if __name__ == "__main__":
     # creating the environment
@@ -63,7 +64,16 @@ if __name__ == "__main__":
         print(f"\rEPISODE [{i + 1}] | RETURN [{episode_return}] | FINAL LOSS [{(episode_loss/steps):.2f}] | EPSILON [{agent.e:.2f}]            ", end="")
         all_returns[i] = episode_return
         all_losses[i] = episode_loss/steps
-    
+
+    # saving the agent variables
+    temp_dict = {}
+    temp_dict.update(agent.__dict__)
+    for cl in agent.__class__.mro()[:-1]:
+        temp_dict.update(cl.__dict__)
+    temp_dict = {k:v for k,v in temp_dict.items() if "__" not in k} # removes all the special attributes
+    with open(path + 'attr.json','w') as fp:
+        json.dump(temp_dict, fp, skipkeys=True, default=str, indent=4) # dumps into a file
+
     # plotting and saving training results
     agent.save(path + "weights.pth")
     np.savetxt(path + "training_data.csv", np.vstack((all_returns, all_losses)), delimiter=",")
